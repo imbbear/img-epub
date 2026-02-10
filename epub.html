@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多格式图片转EPUB工具</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+        
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        
+        .upload-section {
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .preview-section {
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            color: #3498db;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .drop-area {
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: #f8fafc;
+            margin-bottom: 20px;
+        }
+        
+        .drop-area:hover {
+            background-color: #e8f4fc;
+            border-color: #2980b9;
+        }
+        
+        .drop-area.drag-over {
+            background-color: #d4edff;
+            border-color: #1abc9c;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            border: none;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+        
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-generate {
+            background-color: #2ecc71;
+            width: 100%;
+            font-size: 1.1rem;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .btn-generate:hover {
+            background-color: #27ae60;
+        }
+        
+        .btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .image-list {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .image-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .image-item:last-child {
+            border-bottom: none;
+        }
+        
+        .image-preview {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-right: 15px;
+            border: 1px solid #ddd;
+        }
+        
+        .image-info {
+            flex: 1;
+        }
+        
+        .image-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+        
+        .image-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .image-size, .image-type {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .remove-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .remove-btn:hover {
+            background-color: #c0392b;
+        }
+        
+        .preview-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .preview-item {
+            position: relative;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+        
+        .preview-img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .svg-preview {
+            width: 100%;
+            height: 120px;
+            background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #3498db;
+        }
+        
+        .preview-index {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        .preview-type {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        .options {
+            margin-top: 25px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        
+        .format-info {
+            background-color: #e8f4f8;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .format-info h4 {
+            color: #3498db;
+            margin-bottom: 10px;
+        }
+        
+        .format-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .format-tag {
+            background-color: #3498db;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        
+        .instructions {
+            background-color: #fff9e6;
+            border-left: 4px solid #f1c40f;
+            padding: 20px;
+            margin-top: 30px;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .instructions h3 {
+            color: #d35400;
+            margin-bottom: 15px;
+        }
+        
+        .instructions ol {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>多格式图片转EPUB电子书工具</h1>
+        <p class="subtitle">支持JPEG、PNG、GIF、WebP、SVG格式图片，一键生成EPUB电子书文件</p>
+    </header>
+    
+    <div class="container">
+        <div class="upload-section">
+            <h2 class="section-title">1. 上传图片</h2>
+            <div class="drop-area" id="dropArea">
+                <div class="upload-icon">📁</div>
+                <p>拖放图片文件到这里，或点击选择文件</p>
+                <p><small>支持JPEG、PNG、GIF、WebP、SVG格式，按顺序上传将决定在EPUB中的顺序</small></p>
+                <input type="file" id="fileInput" class="file-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*" multiple>
+                <button class="btn" id="selectFilesBtn">选择图片文件</button>
+            </div>
+            
+            <div class="image-list" id="imageList">
+                <!-- 图片列表将动态生成 -->
+                <p id="noFilesMessage" style="text-align: center; color: #7f8c8d; padding: 20px;">
+                    尚未选择任何图片
+                </p>
+            </div>
+            
+            <div class="format-info">
+                <h4>支持的图片格式</h4>
+                <p>本工具支持以下图片格式转换为EPUB电子书：</p>
+                <div class="format-list">
+                    <span class="format-tag">JPEG (.jpg, .jpeg)</span>
+                    <span class="format-tag">PNG (.png)</span>
+                    <span class="format-tag">GIF (.gif)</span>
+                    <span class="format-tag">WebP (.webp)</span>
+                    <span class="format-tag">SVG (.svg)</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview-section">
+            <h2 class="section-title">2. 预览与设置</h2>
+            <div class="preview-container" id="previewContainer">
+                <!-- 图片预览将动态生成 -->
+                <p id="noPreviewMessage" style="text-align: center; color: #7f8c8d; padding: 20px; grid-column: 1 / -1;">
+                    图片预览将在这里显示
+                </p>
+            </div>
+            
+            <div class="options">
+                <h2 class="section-title">3. EPUB设置</h2>
+                <div class="form-group">
+                    <label for="bookTitle">电子书标题</label>
+                    <input type="text" id="bookTitle" placeholder="请输入电子书标题" value="我的图片电子书">
+                </div>
+                
+                <div class="form-group">
+                    <label for="bookAuthor">作者</label>
+                    <input type="text" id="bookAuthor" placeholder="请输入作者名称" value="图片转EPUB工具">
+                </div>
+                
+                <div class="form-group">
+                    <label for="bookDescription">电子书描述</label>
+                    <textarea id="bookDescription" placeholder="请输入电子书描述">这是一本由多种格式图片转换而成的EPUB电子书。</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="imageQuality">图片质量 (仅对JPEG有效)</label>
+                    <input type="range" id="imageQuality" min="0.1" max="1" step="0.1" value="0.9">
+                    <span id="qualityValue">0.9</span>
+                </div>
+                
+                <button class="btn btn-generate" id="generateBtn" disabled>生成EPUB电子书</button>
+                
+                <div class="status" id="statusMessage"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="instructions">
+        <h3>使用步骤说明</h3>
+        <ol>
+            <li><strong>上传图片</strong>：点击"选择图片文件"按钮或拖放图片文件到上传区域，支持JPEG、PNG、GIF、WebP、SVG格式</li>
+            <li><strong>调整顺序</strong>：上传的图片将按顺序显示，您可以通过删除重新上传来调整顺序</li>
+            <li><strong>填写信息</strong>：输入电子书的标题、作者和描述信息</li>
+            <li><strong>设置图片质量</strong>：调整JPEG图片的质量（0.1-1.0），仅对JPEG格式有效</li>
+            <li><strong>生成EPUB</strong>：点击"生成EPUB电子书"按钮，系统将创建并下载EPUB文件</li>
+            <li><strong>注意事项</strong>：SVG格式图片将保持矢量特性，其他格式图片将保持原始质量。EPUB文件本质是ZIP压缩包，可以将其扩展名改为.zip后解压查看内部结构。</li>
+            <li><strong>重新上传</strong>：刷新页面，就可以重新上传图片了</li>
+        </ol>
+    </div>
+    
+    <footer>
+        <p>©HighSky 2026 多格式图片转EPUB工具 | 本工具完全在浏览器中运行，不会上传您的图片到任何服务器</p>
+    </footer>
+
+    <script>
+        // 全局变量
+        let imageFiles = [];
+        
+        // DOM元素
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const selectFilesBtn = document.getElementById('selectFilesBtn');
+        const imageList = document.getElementById('imageList');
+        const previewContainer = document.getElementById('previewContainer');
+        const generateBtn = document.getElementById('generateBtn');
+        const noFilesMessage = document.getElementById('noFilesMessage');
+        const noPreviewMessage = document.getElementById('noPreviewMessage');
+        const statusMessage = document.getElementById('statusMessage');
+        const imageQuality = document.getElementById('imageQuality');
+        const qualityValue = document.getElementById('qualityValue');
+        
+        // 支持的图片格式
+        const supportedFormats = {
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'gif': 'image/gif',
+            'webp': 'image/webp',
+            'svg': 'image/svg+xml'
+        };
+        
+        // 事件监听
+        selectFilesBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+        generateBtn.addEventListener('click', generateEPUB);
+        imageQuality.addEventListener('input', () => {
+            qualityValue.textContent = imageQuality.value;
+        });
+        
+        // 拖放功能
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('drag-over');
+        });
+        
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('drag-over');
+        });
+        
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('drag-over');
+            
+            const files = Array.from(e.dataTransfer.files).filter(file => 
+                isImageFile(file)
+            );
+            
+            if (files.length > 0) {
+                addImageFiles(files);
+            } else {
+                showStatus('请拖放支持的图片文件格式', 'error');
+            }
+        });
+        
+        // 检查是否为支持的图片文件
+        function isImageFile(file) {
+            const extension = file.name.split('.').pop().toLowerCase();
+            return supportedFormats.hasOwnProperty(extension) || 
+                   file.type.startsWith('image/');
+        }
+        
+        // 获取文件类型
+        function getFileType(file) {
+            const extension = file.name.split('.').pop().toLowerCase();
+            if (supportedFormats[extension]) {
+                return supportedFormats[extension];
+            }
+            return file.type;
+        }
+        
+        // 获取文件扩展名
+        function getFileExtension(file) {
+            const extension = file.name.split('.').pop().toLowerCase();
+            if (supportedFormats.hasOwnProperty(extension)) {
+                return extension;
+            }
+            // 从MIME类型推断扩展名
+            if (file.type === 'image/jpeg') return 'jpg';
+            if (file.type === 'image/png') return 'png';
+            if (file.type === 'image/gif') return 'gif';
+            if (file.type === 'image/webp') return 'webp';
+            if (file.type === 'image/svg+xml') return 'svg';
+            return 'img';
+        }
+        
+        // 处理文件选择
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            addImageFiles(files);
+        }
+        
+        // 添加图片文件
+        function addImageFiles(files) {
+            // 过滤只保留支持的图片文件
+            const imageFilesFiltered = files.filter(file => 
+                isImageFile(file)
+            );
+            
+            if (imageFilesFiltered.length === 0) {
+                showStatus('请选择支持的图片文件格式 (JPEG, PNG, GIF, WebP, SVG)', 'error');
+                return;
+            }
+            
+            // 添加到文件列表
+            imageFiles.push(...imageFilesFiltered);
+            updateUI();
+            
+            // 清空文件输入，以便可以再次选择相同文件
+            fileInput.value = '';
+        }
+        
+        // 移除图片文件
+        function removeImageFile(index) {
+            imageFiles.splice(index, 1);
+            updateUI();
+        }
+        
+        // 更新UI
+        function updateUI() {
+            // 更新按钮状态
+            generateBtn.disabled = imageFiles.length === 0;
+            
+            // 更新文件列表
+            if (imageFiles.length === 0) {
+                noFilesMessage.style.display = 'block';
+                imageList.innerHTML = '';
+                imageList.appendChild(noFilesMessage);
+            } else {
+                noFilesMessage.style.display = 'none';
+                
+                let listHTML = '';
+                imageFiles.forEach((file, index) => {
+                    const fileType = getFileType(file);
+                    const fileExtension = getFileExtension(file);
+                    
+                    listHTML += `
+                    <div class="image-item">
+                        <img src="${URL.createObjectURL(file)}" alt="${file.name}" class="image-preview">
+                        <div class="image-info">
+                            <div class="image-name">${file.name}</div>
+                            <div class="image-details">
+                                <div class="image-size">${formatFileSize(file.size)}</div>
+                                <div class="image-type">${fileExtension.toUpperCase()}</div>
+                            </div>
+                        </div>
+                        <button class="remove-btn" onclick="removeImageFile(${index})">×</button>
+                    </div>
+                    `;
+                });
+                imageList.innerHTML = listHTML;
+            }
+            
+            // 更新预览
+            if (imageFiles.length === 0) {
+                noPreviewMessage.style.display = 'block';
+                previewContainer.innerHTML = '';
+                previewContainer.appendChild(noPreviewMessage);
+            } else {
+                noPreviewMessage.style.display = 'none';
+                
+                let previewHTML = '';
+                imageFiles.forEach((file, index) => {
+                    const fileExtension = getFileExtension(file);
+                    const isSVG = fileExtension === 'svg';
+                    
+                    previewHTML += `
+                    <div class="preview-item">
+                        ${isSVG ? 
+                            `<div class="svg-preview">SVG</div>` : 
+                            `<img src="${URL.createObjectURL(file)}" alt="预览 ${index + 1}" class="preview-img">`
+                        }
+                        <div class="preview-index">${index + 1}</div>
+                        <div class="preview-type">${fileExtension.toUpperCase()}</div>
+                    </div>
+                    `;
+                });
+                previewContainer.innerHTML = previewHTML;
+            }
+        }
+        
+        // 生成EPUB
+        async function generateEPUB() {
+            if (imageFiles.length === 0) {
+                showStatus('请先上传图片', 'error');
+                return;
+            }
+            
+            showStatus('正在生成EPUB文件，请稍候...', 'success');
+            generateBtn.disabled = true;
+            
+            try {
+                // 创建ZIP文件（EPUB本质上是ZIP）
+                const zip = new JSZip();
+                
+                // 添加mimetype文件（EPUB标准要求）
+                zip.file("mimetype", "application/epub+zip");
+                
+                // 创建META-INF文件夹并添加container.xml
+                const metaInf = zip.folder("META-INF");
+                metaInf.file("container.xml", `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`);
+                
+                // 创建OEBPS文件夹（存放主要内容）
+                const oebps = zip.folder("OEBPS");
+                
+                // 创建内容文件
+                const bookTitle = document.getElementById('bookTitle').value || "我的图片电子书";
+                const bookAuthor = document.getElementById('bookAuthor').value || "图片转EPUB工具";
+                const bookDescription = document.getElementById('bookDescription').value || "这是一本由多种格式图片转换而成的EPUB电子书。";
+                const quality = parseFloat(imageQuality.value);
+                
+                // 创建content.opf文件
+                let manifestItems = '';
+                let spineItems = '';
+                let guideItems = '';
+                
+                // 为每张图片创建HTML文件
+                for (let i = 0; i < imageFiles.length; i++) {
+                    const file = imageFiles[i];
+                    const fileExtension = getFileExtension(file);
+                    const mediaType = getFileType(file);
+                    const fileName = `image_${i + 1}.html`;
+                    const imageName = `image_${i + 1}.${fileExtension}`;
+                    
+                    // 处理图片数据
+                    let imageData;
+                    
+                    // 对于JPEG图片，我们可以进行质量压缩
+                    if (fileExtension === 'jpg' || fileExtension === 'jpeg') {
+                        imageData = await compressJPEG(file, quality);
+                    } else {
+                        // 其他格式保持原样
+                        imageData = await fileToArrayBuffer(file);
+                    }
+                    
+                    // 将图片添加到ZIP
+                    oebps.file(imageName, imageData);
+                    
+                    // 创建HTML内容
+                    const htmlContent = `<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <title>${bookTitle} - 第${i + 1}页</title>
+  <style>
+    body { 
+      margin: 0; 
+      padding: 0; 
+      text-align: center; 
+      background-color: #000; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    img, svg, object { 
+      max-width: 100%; 
+      max-height: 100vh; 
+      height: auto; 
+      width: auto;
+    }
+  </style>
+</head>
+<body>
+  ${fileExtension === 'svg' ? 
+    `<object data="${imageName}" type="image/svg+xml" width="100%" height="100%"></object>` :
+    `<img src="${imageName}" alt="第${i + 1}页"/>`
+  }
+</body>
+</html>`;
+                    
+                    oebps.file(fileName, htmlContent);
+                    
+                    // 添加到manifest
+                    manifestItems += `    <item id="image${i + 1}" href="${imageName}" media-type="${mediaType}"/>\n`;
+                    manifestItems += `    <item id="page${i + 1}" href="${fileName}" media-type="application/xhtml+xml"/>\n`;
+                    
+                    // 添加到spine
+                    spineItems += `    <itemref idref="page${i + 1}"/>\n`;
+                    
+                    // 第一张图片作为封面
+                    if (i === 0) {
+                        guideItems += `    <reference type="cover" title="封面" href="${fileName}"/>\n`;
+                    }
+                }
+                
+                // 创建目录文件
+                const tocHtml = `<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <title>目录</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    h1 { color: #333; }
+    .format-info {
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+    ol { list-style-type: none; padding-left: 0; }
+    li { 
+      padding: 10px 0; 
+      border-bottom: 1px solid #eee; 
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .page-link { 
+      color: #0066cc; 
+      text-decoration: none; 
+      flex: 1;
+    }
+    .page-link:hover { text-decoration: underline; }
+    .page-format {
+      background-color: #f0f0f0;
+      color: #666;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>${bookTitle}</h1>
+  <div class="format-info">共 ${imageFiles.length} 张图片</div>
+  <ol>
+${imageFiles.map((file, i) => {
+  const ext = getFileExtension(file).toUpperCase();
+  return `    <li>
+      <a class="page-link" href="image_${i + 1}.html">第 ${i + 1} 页</a>
+      <span class="page-format">${ext}</span>
+    </li>`;
+}).join('\n')}
+  </ol>
+</body>
+</html>`;
+                
+                oebps.file("toc.html", tocHtml);
+                
+                // 创建content.opf文件
+                const opfContent = `<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="bookid">urn:uuid:${generateUUID()}</dc:identifier>
+    <dc:title>${bookTitle}</dc:title>
+    <dc:creator>${bookAuthor}</dc:creator>
+    <dc:language>zh-CN</dc:language>
+    <dc:description>${bookDescription}</dc:description>
+    <meta property="dcterms:modified">${new Date().toISOString().split('.')[0]+"Z"}</meta>
+  </metadata>
+  <manifest>
+    <item id="toc" href="toc.html" media-type="application/xhtml+xml"/>
+${manifestItems}    <item id="nav" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+  </manifest>
+  <spine toc="nav">
+${spineItems}  </spine>
+  <guide>
+${guideItems}  </guide>
+</package>`;
+                
+                oebps.file("content.opf", opfContent);
+                
+                // 创建目录导航文件
+                const tocNcx = `<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+  <head>
+    <meta name="dtb:uid" content="urn:uuid:${generateUUID()}"/>
+    <meta name="dtb:depth" content="1"/>
+    <meta name="dtb:totalPageCount" content="0"/>
+    <meta name="dtb:maxPageNumber" content="0"/>
+  </head>
+  <docTitle>
+    <text>${bookTitle}</text>
+  </docTitle>
+  <docAuthor>
+    <text>${bookAuthor}</text>
+  </docAuthor>
+  <navMap>
+${imageFiles.map((file, i) => {
+  const ext = getFileExtension(file).toUpperCase();
+  return `    <navPoint id="nav${i + 1}" playOrder="${i + 1}">
+      <navLabel>
+        <text>第 ${i + 1} 页 (${ext})</text>
+      </navLabel>
+      <content src="image_${i + 1}.html"/>
+    </navPoint>`;
+}).join('\n')}
+  </navMap>
+</ncx>`;
+                
+                oebps.file("toc.ncx", tocNcx);
+                
+                // 生成ZIP文件
+                const zipBlob = await zip.generateAsync({type: "blob"});
+                
+                // 创建下载链接
+                const downloadLink = document.createElement('a');
+                downloadLink.href = URL.createObjectURL(zipBlob);
+                downloadLink.download = `${bookTitle.replace(/[^\w\u4e00-\u9fa5]/g, '_')}.epub`;
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                
+                showStatus(`EPUB文件生成成功！已下载为"${downloadLink.download}"`, 'success');
+            } catch (error) {
+                console.error('生成EPUB时出错:', error);
+                showStatus('生成EPUB时出错：' + error.message, 'error');
+            } finally {
+                generateBtn.disabled = false;
+            }
+        }
+        
+        // JPEG图片压缩
+        async function compressJPEG(file, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        
+                        canvas.toBlob(function(blob) {
+                            const reader = new FileReader();
+                            reader.onload = function() {
+                                resolve(reader.result);
+                            };
+                            reader.onerror = reject;
+                            reader.readAsArrayBuffer(blob);
+                        }, 'image/jpeg', quality);
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // 工具函数：文件大小格式化
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 工具函数：显示状态消息
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status ' + type;
+        }
+        
+        // 工具函数：将文件转换为ArrayBuffer
+        function fileToArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+        
+        // 工具函数：生成UUID
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        
+        // 初始化
+        updateUI();
+    </script>
+    
+    <!-- 引入JSZip库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</body>
+</html>
